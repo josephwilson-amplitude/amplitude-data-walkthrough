@@ -1,0 +1,1259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Amplitude Data Walkthrough</title>
+<meta name="description" content="How Amplitude structures events, exports them to BigQuery, and works with your semantic layer, AI tools and permissions.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#FFFFFF;
+  --surface:#F2F4F8;
+  --raised:#FFFFFF;
+  --line:#D5D9E0;
+  --line-strong:#9FA5AD;
+  --ink:#000000;
+  --ink-2:#262A2E;
+  --muted:#505658;
+  --accent:#0052F2;          /* blue for text, links, icons */
+  --accent-fill:#0052F2;     /* blue behind white text, same in both themes */
+  --accent-soft:rgba(0,82,242,.08);
+  --accent-line:rgba(0,82,242,.4);
+  --c-who:#0052F2;
+  --c-what:#A373FF;
+  --c-props:#6980FF;
+  --c-user:#FF7D78;
+  --c-ctx:#868D95;
+  --soon:#A373FF;
+  --soon-soft:rgba(163,115,255,.16);
+  --code-bg:#13171A;
+  --code-ink:#F2F4F8;
+  --code-dim:#9FA5AD;
+  --code-key:#4083FF;
+  --code-str:#D5D9E0;
+  --shadow:0 1px 2px rgba(19,23,26,.06),0 8px 24px rgba(19,23,26,.06);
+  --font:"Gellix","Poppins",Helvetica,Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --nav-h:60px;
+  --show-dark:none;
+  --show-light:inline;
+}
+/* Dark palette. The theme button is a checkbox (#tt) that flips whichever theme is active,
+   so it works without JavaScript. */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]):not(:has(#tt:checked)){
+    color-scheme: dark;
+    --show-dark:inline;
+    --show-light:none;
+    --bg:#000000;
+    --surface:#13171A;
+    --raised:#1B1F23;
+    --line:#373D42;
+    --line-strong:#697077;
+    --ink:#FFFFFF;
+    --ink-2:#D5D9E0;
+    --muted:#B9BFC7;
+    --accent:#4083FF;
+    --accent-soft:rgba(64,131,255,.16);
+    --accent-line:rgba(64,131,255,.55);
+    --c-who:#4083FF;
+    --c-ctx:#9FA5AD;
+    --soon-soft:rgba(163,115,255,.24);
+    --code-bg:#13171A;
+    --shadow:none;
+  }
+}
+@media not (prefers-color-scheme: dark){
+  :root:not([data-theme]):has(#tt:checked){
+    color-scheme: dark;
+    --show-dark:inline;
+    --show-light:none;
+    --bg:#000000;
+    --surface:#13171A;
+    --raised:#1B1F23;
+    --line:#373D42;
+    --line-strong:#697077;
+    --ink:#FFFFFF;
+    --ink-2:#D5D9E0;
+    --muted:#B9BFC7;
+    --accent:#4083FF;
+    --accent-soft:rgba(64,131,255,.16);
+    --accent-line:rgba(64,131,255,.55);
+    --c-who:#4083FF;
+    --c-ctx:#9FA5AD;
+    --soon-soft:rgba(163,115,255,.24);
+    --code-bg:#13171A;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]:not(:has(#tt:checked)),
+:root[data-theme="light"]:has(#tt:checked){
+  color-scheme: dark;
+  --show-dark:inline;
+  --show-light:none;
+  --bg:#000000;
+  --surface:#13171A;
+  --raised:#1B1F23;
+  --line:#373D42;
+  --line-strong:#697077;
+  --ink:#FFFFFF;
+  --ink-2:#D5D9E0;
+  --muted:#B9BFC7;
+  --accent:#4083FF;
+  --accent-soft:rgba(64,131,255,.16);
+  --accent-line:rgba(64,131,255,.55);
+  --c-who:#4083FF;
+  --c-ctx:#9FA5AD;
+  --soon-soft:rgba(163,115,255,.24);
+  --code-bg:#13171A;
+  --shadow:none;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:calc(var(--nav-h) + 16px)}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+img{max-width:100%}
+[hidden]{display:none!important}
+a{color:var(--accent)}
+code,.mono{font-family:var(--mono);font-size:.88em}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.i{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.i.sm{width:18px;height:18px}
+
+.wrap{max-width:1100px;margin:0 auto;padding-inline:20px}
+
+/* Nav */
+.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
+.nav .wrap{display:flex;align-items:center;gap:16px;height:var(--nav-h)}
+.logo-placeholder{flex:none;display:grid;place-items:center;height:30px;padding-inline:10px;border:1px dashed var(--line-strong);border-radius:6px;font-size:13px;font-weight:500;color:var(--muted);white-space:nowrap}
+.nav-links{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0;margin:0;padding:0;list-style:none}
+.nav-links::-webkit-scrollbar{display:none}
+.nav-links a{display:block;padding:8px 12px;border-radius:999px;color:var(--ink-2);text-decoration:none;font-size:15px;font-weight:500;white-space:nowrap}
+.nav-links a:hover{color:var(--ink);background:var(--surface)}
+.nav-links a.active{color:var(--accent);background:var(--accent-soft)}
+.theme-btn{flex:none;display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 12px;border-radius:10px;border:1px solid var(--line-strong);background:var(--raised);color:var(--ink);font:inherit;font-size:14px;font-weight:500;cursor:pointer}
+.theme-btn:hover{border-color:var(--accent)}
+@media (max-width:640px){.theme-btn .lbl{display:none}.logo-placeholder{font-size:12px;padding-inline:8px}}
+
+/* Hero */
+.hero{padding-block:56px 28px}
+.eyebrow{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0 0 10px}
+h1{font-size:clamp(34px,5vw,52px);line-height:1.08;font-weight:700;margin:0 0 14px;letter-spacing:-.01em;text-wrap:balance;max-width:17ch}
+.lede{font-size:18px;color:var(--ink-2);margin:0;max-width:58ch}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0;padding:0;list-style:none}
+.toc a{display:flex;align-items:center;gap:10px;padding:8px 16px 8px 8px;border:1px solid var(--line-strong);border-radius:999px;text-decoration:none;color:var(--ink);font-size:15px;font-weight:500}
+.toc a:hover{border-color:var(--accent)}
+.toc .n{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--surface);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+
+/* Sections */
+section.part{padding-block:60px;border-top:1px solid var(--line)}
+.part-head{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px 48px;align-items:end;margin-bottom:28px}
+@media (max-width:820px){.part-head{grid-template-columns:1fr}}
+h2{font-size:clamp(26px,3.4vw,36px);line-height:1.14;font-weight:600;margin:0;letter-spacing:-.005em;text-wrap:balance}
+h3.sub-h{font-size:20px;font-weight:600;margin:36px 0 6px}
+.sub-p{margin:0 0 16px;color:var(--ink-2);max-width:64ch}
+.points{margin:0;padding:0;list-style:none;display:grid;gap:8px;color:var(--ink-2);font-size:17px}
+.points li{display:flex;gap:10px;align-items:flex-start}
+.points li::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:.62em}
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 0;padding:0;list-style:none}
+.facts li{font-size:14px;font-weight:500;padding:7px 12px;border-radius:8px;background:var(--raised);border:1px solid var(--line);color:var(--ink-2)}
+.note{font-size:15px;color:var(--ink-2);margin:16px 0 0;max-width:76ch}
+.note strong{color:var(--ink)}
+.tag{display:inline-block;font-size:13px;font-weight:500;color:var(--ink-2);border:1px solid var(--line-strong);border-radius:6px;padding:1px 8px;white-space:nowrap}
+.soon{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--soon-soft);color:var(--ink);white-space:nowrap;vertical-align:middle}
+.soon::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--soon)}
+.stage{background:var(--surface);border-radius:20px;padding:24px}
+@media (max-width:560px){.stage{padding:14px;border-radius:16px}}
+.card{background:var(--raised);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:15px;font-weight:500;padding:9px 16px;border-radius:10px;border:1px solid var(--line-strong);background:var(--raised);color:var(--ink);cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.primary{background:var(--accent-fill);border-color:var(--accent-fill);color:#FFFFFF}
+.seg{display:inline-flex;padding:4px;border-radius:12px;background:var(--surface);border:1px solid var(--line);gap:4px;flex-wrap:wrap}
+.seg button{font:inherit;font-size:15px;font-weight:500;padding:8px 16px;border-radius:9px;border:0;background:transparent;color:var(--ink-2);cursor:pointer}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--accent-fill);color:#FFFFFF}
+
+/* 1a. Event anatomy */
+.anatomy{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.anatomy{grid-template-columns:1fr}}
+.json{margin:0;background:var(--code-bg);color:var(--code-ink);border-radius:14px;padding:16px 0;font-family:var(--mono);font-size:14px;line-height:1.75;overflow-x:auto}
+.json .ln{display:block;padding:0 16px 0 14px;border-left:3px solid transparent;white-space:pre;transition:opacity .2s}
+.json .ln[data-k="who"]{border-left-color:var(--c-who)}
+.json .ln[data-k="what"]{border-left-color:var(--c-what)}
+.json .ln[data-k="props"]{border-left-color:var(--c-props)}
+.json .ln[data-k="user"]{border-left-color:var(--c-user)}
+.json .ln[data-k="ctx"]{border-left-color:var(--c-ctx)}
+.json.focus .ln{opacity:.3}
+.json.focus .ln.on{opacity:1}
+.json .key{color:var(--code-key)}
+.json .s{color:var(--code-str)}
+.json .cm{color:var(--code-dim)}
+.legend{display:grid;gap:8px}
+.leg{display:grid;grid-template-columns:4px minmax(0,1fr);gap:12px;text-align:left;font:inherit;color:inherit;background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:12px 14px 12px 12px;cursor:pointer}
+.leg:hover,.leg.on{border-color:var(--accent)}
+.leg i{border-radius:2px}
+.leg b{display:block;font-size:15px;font-weight:600}
+.leg span{display:block;font-size:14px;color:var(--ink-2)}
+.added{margin-top:16px;padding:16px;display:grid;gap:10px}
+.added h4{margin:0;font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+.added h4 .i{color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--mono);font-size:13px;padding:4px 10px;border-radius:8px;background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+
+/* 1b. Identity journey */
+.journey{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px}
+@media (max-width:900px){.journey{grid-template-columns:1fr}}
+.lanes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:720px){.lanes{grid-template-columns:1fr}}
+.ev{padding:14px;display:flex;flex-direction:column;gap:10px;transition:opacity .35s,border-color .35s,transform .35s}
+.ev.future{opacity:.4}
+.ev.current{border-color:var(--accent);transform:translateY(-2px)}
+.ev-top{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;color:var(--ink-2)}
+.ev-top .when{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--muted)}
+.ev-name{font-family:var(--mono);font-size:15px;font-weight:500}
+.ids{display:grid;gap:6px;font-size:13px;margin:0}
+.ids div{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.ids dt{color:var(--muted);font-family:var(--mono)}
+.ids dd{margin:0;font-family:var(--mono)}
+.ids .null{color:var(--muted);font-style:italic}
+.aid{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:13px;font-weight:500;padding:2px 10px;border-radius:999px;background:var(--accent-soft);color:var(--ink);border:1px solid var(--accent-line)}
+.aid.anon{background:var(--soon-soft);border-color:var(--c-what)}
+.aid .was{text-decoration:line-through;color:var(--muted)}
+.profile{padding:16px;display:flex;flex-direction:column;gap:12px}
+.profile h4{font-size:14px;font-weight:600;color:var(--ink-2);margin:0}
+.count{display:flex;align-items:baseline;gap:10px}
+.count b{font-size:46px;line-height:1;font-weight:600;font-variant-numeric:tabular-nums}
+.count span{color:var(--ink-2);font-size:15px}
+.profile p{margin:0;font-size:15px;color:var(--ink-2)}
+.people{display:flex;flex-wrap:wrap;gap:6px}
+.merge-row{font-family:var(--mono);font-size:13px;background:var(--surface);border-radius:8px;padding:8px 10px;overflow-x:auto;white-space:nowrap}
+.controls{display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap}
+.dots{display:flex;gap:6px}
+.dots button{width:30px;height:8px;border-radius:4px;border:0;padding:0;background:var(--line-strong);cursor:pointer}
+.dots button.on{background:var(--accent)}
+.step-label{font-size:15px;font-weight:500;color:var(--ink-2);margin-left:auto}
+@media (max-width:560px){.step-label{margin-left:0;width:100%}}
+
+/* 2. Pipeline */
+.pipe{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;counter-reset:st}
+@media (max-width:1000px){.pipe{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.pipe{grid-template-columns:1fr}}
+.st{padding:16px;display:flex;flex-direction:column;gap:8px;position:relative}
+.st-top{display:flex;align-items:center;gap:10px}
+.st-n{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--accent-fill);color:#FFFFFF;font-size:14px;font-weight:600;flex:none}
+.st h4{margin:0;font-size:16px;font-weight:600}
+.st .where{font-size:13px;font-weight:500;color:var(--muted)}
+.st ul{margin:0;padding-left:18px;font-size:14px;color:var(--ink-2);display:grid;gap:4px}
+.st.you{border-color:var(--accent)}
+.setup{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:12px}
+@media (max-width:820px){.setup{grid-template-columns:1fr}}
+.setup .card{padding:16px}
+.setup h4{margin:0 0 8px;font-size:16px;font-weight:600;display:flex;gap:8px;align-items:center}
+.setup h4 .i{color:var(--accent)}
+.setup ol,.setup ul{margin:0;padding-left:20px;font-size:14px;color:var(--ink-2);display:grid;gap:4px}
+.tbl-wrap{overflow-x:auto;border-radius:14px;border:1px solid var(--line);background:var(--raised)}
+table.row{border-collapse:collapse;width:100%;min-width:860px;font-size:13px}
+.row th,.row td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+.row thead th{font-family:var(--mono);font-weight:500;color:var(--ink-2);background:var(--surface)}
+.row thead th small{display:block;font-family:var(--font);font-size:12px;color:var(--muted);font-weight:400}
+.row td{font-family:var(--mono);color:var(--ink)}
+.row tr:last-child td{border-bottom:0}
+.row td.json-cell{color:var(--ink-2)}
+.code{margin-top:16px;background:var(--code-bg);color:var(--code-ink);border-radius:14px;overflow:hidden}
+.code-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid #373D42;font-size:14px}
+.code-head b{font-weight:500}
+.copy{font:inherit;font-size:14px;font-weight:500;color:#FFFFFF;background:#262A2E;border:1px solid #505658;border-radius:8px;padding:5px 12px;cursor:pointer}
+.copy:hover{border-color:#4083FF}
+.code pre{margin:0;padding:16px;overflow-x:auto;font-family:var(--mono);font-size:14px;line-height:1.7}
+.code .k{color:var(--code-key)}
+.code .c{color:var(--code-dim)}
+
+/* Flow pieces (3, 4) */
+.arrow{display:grid;place-items:center;color:var(--accent)}
+.arrow svg{width:40px;height:16px;overflow:visible}
+.arrow path{stroke:currentColor;stroke-width:1.6;fill:none;stroke-dasharray:4 4;animation:dash 1.2s linear infinite}
+.arrow polygon{fill:currentColor}
+@keyframes dash{to{stroke-dashoffset:-16}}
+.node{padding:16px;display:flex;flex-direction:column;gap:10px}
+.node.hl{border-color:var(--accent)}
+.node-top{display:flex;align-items:center;gap:10px}
+.node-ic{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;background:var(--surface);color:var(--ink);flex:none}
+.node.hl .node-ic{background:var(--accent-soft);color:var(--accent)}
+.node h4{margin:0;font-size:16px;font-weight:600}
+.node .sub{margin:0;font-size:14px;color:var(--ink-2)}
+.node ul{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+.node li{font-size:14px;display:flex;gap:8px;align-items:flex-start;color:var(--ink-2)}
+.node li .i{color:var(--muted);margin-top:2px}
+.mini{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:8px;background:var(--surface)}
+.mini b{font-size:14px;font-weight:600}
+.mini span{font-size:13px;color:var(--ink-2)}
+
+/* 3. Semantic layer */
+.sem-toggle{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.sem{display:grid;grid-template-columns:minmax(0,1fr) 48px minmax(0,1.25fr) 48px minmax(0,1fr);align-items:center}
+@media (max-width:960px){.sem{grid-template-columns:1fr}.sem .arrow{height:36px}.sem .arrow svg{transform:rotate(90deg)}}
+.paths{display:grid;gap:10px}
+.path{padding:14px;display:grid;gap:8px}
+.path-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.path-top b{font-size:15px;font-weight:600}
+.path-top .tag,.path-top .soon{margin-left:auto}
+.path-steps{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:14px;color:var(--ink-2)}
+.path-steps .chip{font-family:var(--font);font-size:13px}
+.path-steps .to{color:var(--muted)}
+.loop{margin-top:12px;display:flex;align-items:center;gap:10px;font-size:14px;color:var(--ink-2);padding:10px 14px;border:1px dashed var(--line-strong);border-radius:12px}
+.loop .i{color:var(--accent)}
+.ctx-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1.2fr);gap:12px;margin-top:16px}
+@media (max-width:960px){.ctx-row{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.ctx-row{grid-template-columns:1fr}}
+.src{padding:12px 14px;display:grid;gap:6px;align-content:start}
+.src-top{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600}
+.src-top .i{color:var(--muted)}
+.src .tag{justify-self:start}
+.src pre{margin:0;font-family:var(--mono);font-size:13px;line-height:1.6;color:var(--ink-2);white-space:pre-wrap}
+.answer{padding:14px;border-color:var(--accent-line);background:var(--accent-soft);display:grid;gap:8px;align-content:start}
+.answer .q{font-size:14px;color:var(--ink-2)}
+.answer .a{font-size:15px}
+.vision-banner{display:flex;gap:10px;align-items:center;padding:12px 16px;border-radius:12px;background:var(--soon-soft);font-size:15px;margin-bottom:16px}
+.vision-banner b{font-weight:600}
+.hub{background:var(--accent-fill);color:#FFFFFF;border-radius:16px;padding:18px;display:grid;gap:10px}
+.hub h4{margin:0;font-size:17px;font-weight:600;display:flex;gap:8px;align-items:center}
+.hub ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.hub li{display:flex;gap:10px;font-size:14px;align-items:flex-start}
+.hub li b{font-weight:600;min-width:64px}
+.consumers{display:grid;gap:8px}
+.consumer{display:flex;align-items:center;gap:10px;padding:10px 12px;font-size:15px;font-weight:500}
+.consumer .i{color:var(--accent)}
+.both{display:grid;place-items:center;color:var(--accent)}
+.both svg{width:44px;height:28px}
+.both path{stroke:currentColor;stroke-width:1.6;fill:none}
+@media (max-width:960px){.both svg{transform:rotate(90deg)}}
+
+/* 4. MCP session */
+.session{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.session{grid-template-columns:1fr}}
+.turns{display:grid;gap:10px}
+.turn{display:grid;grid-template-columns:36px minmax(0,1fr);gap:12px;padding:12px 14px;align-items:start}
+.turn .st-n{width:30px;height:30px}
+.turn b{display:block;font-size:15px;font-weight:600}
+.turn code{font-size:13px;color:var(--accent)}
+.turn span{display:block;font-size:14px;color:var(--ink-2)}
+.turn.user{background:var(--accent-soft);border-color:var(--accent-line)}
+.who-ic{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--raised);border:1px solid var(--line-strong)}
+.side{display:grid;gap:12px}
+.side .card{padding:16px}
+.side h4{margin:0 0 8px;font-size:16px;font-weight:600;display:flex;gap:8px;align-items:center}
+.side ul{margin:0;padding-left:20px;font-size:14px;color:var(--ink-2);display:grid;gap:4px}
+.clients{display:flex;flex-wrap:wrap;gap:6px}
+.client{font-size:14px;font-weight:500;padding:6px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--line)}
+
+/* 5. Governance */
+.grid-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:16px;background:var(--raised);margin-top:16px}
+table.perm{width:100%;border-collapse:collapse;min-width:660px;font-size:15px}
+.perm th,.perm td{padding:14px 16px;text-align:center;border-bottom:1px solid var(--line)}
+.perm tr:last-child td,.perm tr:last-child th{border-bottom:0}
+.perm thead th{font-size:14px;font-weight:600;color:var(--ink);background:var(--surface)}
+.perm tbody th{text-align:left;font-weight:600;width:34%}
+.perm tbody th small{display:block;font-weight:400;font-size:13px;color:var(--ink-2);margin-top:2px}
+.yes,.no{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;padding:4px 10px;border-radius:999px}
+.yes{background:var(--accent-soft);color:var(--accent)}
+.no{color:var(--muted);border:1px solid var(--line)}
+.cell-note{font-size:14px;color:var(--ink-2)}
+.changed{animation:pulse .7s ease}
+@keyframes pulse{0%{background:var(--accent-soft)}100%{background:transparent}}
+.gov-notes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}
+@media (max-width:820px){.gov-notes{grid-template-columns:1fr}}
+.gov-notes div{display:flex;gap:10px;font-size:15px;color:var(--ink-2)}
+.gov-notes .i{color:var(--accent)}
+
+/* No-JavaScript interactivity: hidden radios and checkboxes drive state through CSS */
+.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+label.theme-btn{user-select:none}
+.when-dark{display:var(--show-dark)}
+.when-light{display:var(--show-light)}
+#tt:focus-visible + label{outline:2px solid var(--accent);outline-offset:2px}
+label.btn{user-select:none}
+.btn.off{opacity:.45;cursor:default;pointer-events:none}
+
+/* Legend hover highlights matching lines */
+.anatomy:has(.leg:is(:hover,:focus-visible)) .ln{opacity:.3}
+.anatomy:has(.leg[data-k="who"]:is(:hover,:focus-visible)) .ln[data-k="who"],
+.anatomy:has(.leg[data-k="what"]:is(:hover,:focus-visible)) .ln[data-k="what"],
+.anatomy:has(.leg[data-k="props"]:is(:hover,:focus-visible)) .ln[data-k="props"],
+.anatomy:has(.leg[data-k="user"]:is(:hover,:focus-visible)) .ln[data-k="user"],
+.anatomy:has(.leg[data-k="ctx"]:is(:hover,:focus-visible)) .ln[data-k="ctx"]{opacity:1}
+
+/* Step-through */
+.pstate,.ctl{display:none}
+#s1:checked ~ .stage .pstate[data-s="1"],#s2:checked ~ .stage .pstate[data-s="2"],
+#s3:checked ~ .stage .pstate[data-s="3"],#s4:checked ~ .stage .pstate[data-s="4"]{display:flex}
+#s1:checked ~ .stage .ctl[data-s="1"],#s2:checked ~ .stage .ctl[data-s="2"],
+#s3:checked ~ .stage .ctl[data-s="3"],#s4:checked ~ .stage .ctl[data-s="4"]{display:flex}
+.pstate{flex-direction:column;gap:12px}
+.ctl{align-items:center;gap:12px;flex-wrap:wrap;flex:1}
+#s1:checked ~ .stage .ev[data-i="1"],#s1:checked ~ .stage .ev[data-i="2"],
+#s2:checked ~ .stage .ev[data-i="2"]{opacity:.4}
+#s1:checked ~ .stage .ev[data-i="0"],#s2:checked ~ .stage .ev[data-i="1"],
+#s3:checked ~ .stage .ev[data-i="2"]{border-color:var(--accent);transform:translateY(-2px)}
+.aid0-merged{display:none}
+#s3:checked ~ .stage .aid0-anon,#s4:checked ~ .stage .aid0-anon{display:none}
+#s3:checked ~ .stage .aid0-merged,#s4:checked ~ .stage .aid0-merged{display:inline-flex}
+.dots label{display:block;width:30px;height:8px;border-radius:4px;background:var(--line-strong);cursor:pointer}
+#s1:checked ~ .stage .dots label:nth-child(-n+1),#s2:checked ~ .stage .dots label:nth-child(-n+2),
+#s3:checked ~ .stage .dots label:nth-child(-n+3),#s4:checked ~ .stage .dots label:nth-child(-n+4){background:var(--accent)}
+.stepper input:focus-visible ~ .stage .controls{outline:2px solid var(--accent);outline-offset:6px;border-radius:10px}
+
+/* Segmented toggles (section 3 and 5) */
+.seg label{font-size:15px;font-weight:500;padding:8px 16px;border-radius:9px;color:var(--ink-2);cursor:pointer;user-select:none}
+.seg label:hover{color:var(--ink)}
+#sem-now:checked ~ .seg label[for="sem-now"],#sem-next:checked ~ .seg label[for="sem-next"],
+#g-def:checked ~ .seg label[for="g-def"],#g-lock:checked ~ .seg label[for="g-lock"]{background:var(--accent-fill);color:#FFFFFF}
+#sem-now:focus-visible ~ .seg label[for="sem-now"],#sem-next:focus-visible ~ .seg label[for="sem-next"],
+#g-def:focus-visible ~ .seg label[for="g-def"],#g-lock:focus-visible ~ .seg label[for="g-lock"]{outline:2px solid var(--accent);outline-offset:2px}
+.recipe{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:960px){.recipe{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.recipe{grid-template-columns:1fr}}
+.rstep{display:grid;grid-template-columns:30px minmax(0,1fr);gap:12px;padding:14px;align-items:start}
+.rstep b{display:block;font-size:15px;font-weight:600;margin-bottom:2px}
+.rstep span{display:block;font-size:14px;color:var(--ink-2)}
+.rstep code{color:var(--accent)}
+.pane-next{display:none}
+#sem-next:checked ~ .pane-now{display:none}
+#sem-next:checked ~ .pane-next{display:block}
+.g-lock-tbl{display:none}
+#g-lock:checked ~ .g-def-tbl{display:none}
+#g-lock:checked ~ .g-lock-tbl{display:block}
+.perm th.pu{color:var(--accent)}
+.perm th.pu small{display:block;font-size:12px;font-weight:500;color:var(--ink-2)}
+
+/* 2. Architecture diagram */
+.arch{overflow-x:auto;background:var(--raised);border:1px solid var(--line);border-radius:14px;padding:8px}
+.arch svg{display:block;width:100%;min-width:900px;height:auto}
+.arch .a-box{fill:var(--raised);stroke:var(--line-strong);stroke-width:1.2}
+.arch .a-in{fill:var(--surface);stroke:var(--line);stroke-width:1}
+.arch .a-in2{fill:var(--raised);stroke:var(--accent-line);stroke-width:1}
+.arch .a-amp{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+.arch .a-gcp{fill:none;stroke:var(--line-strong);stroke-width:1.5;stroke-dasharray:7 5}
+.arch .a-row{fill:var(--raised);stroke:var(--line);stroke-width:1}
+.arch .a-ln{stroke:var(--accent);stroke-width:1.8;fill:none}
+.arch .a-dash{stroke-dasharray:4 3}
+.arch .a-head{fill:var(--accent)}
+.arch .a-badge{fill:var(--accent-fill)}
+.arch .a-bn{fill:#FFFFFF;font:600 12px var(--font);text-anchor:middle}
+.arch .a-t{fill:var(--ink);font:600 16px var(--font)}
+.arch .a-t2{fill:var(--ink);font:600 14px var(--font)}
+.arch .a-s{fill:var(--ink-2);font:400 13px var(--font)}
+.arch .a-m{fill:var(--ink);font:500 13px var(--mono)}
+.arch-cap{font-size:14px;color:var(--ink-2);margin:8px 0 16px}
+.row td.nul{color:var(--muted);font-style:italic}
+.row td.flag{color:var(--accent);font-weight:600}
+.row.small{min-width:0}
+.merge-mini{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px}
+.merge-mini .mm-label{font-size:14px;font-weight:600}
+.merge-mini .tbl-wrap{flex:0 1 auto}
+
+/* 3. Semantic layers */
+.arrow.back{color:var(--accent)}
+@media (max-width:960px){.arrow.back svg{transform:rotate(-90deg)}}
+.layer-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:900px){.layer-grid{grid-template-columns:1fr 1fr}}
+@media (max-width:520px){.layer-grid{grid-template-columns:1fr}}
+.lg{padding:14px;display:grid;gap:4px;align-content:start}
+.lg b{font-size:15px;font-weight:600}
+.lg span{font-size:14px;color:var(--ink-2)}
+.node li .tag{margin-left:4px;font-size:12px}
+.hub li span{opacity:.92}
+.hub-p{margin:0;font-size:14px}
+.steps-inline{display:flex!important;flex-wrap:wrap;gap:6px}
+.steps-inline li{background:rgba(255,255,255,.16);border-radius:8px;padding:4px 10px;font-weight:500}
+.fut{display:grid;grid-template-columns:minmax(0,.8fr) 40px minmax(0,1fr) 40px minmax(0,1.3fr) 40px minmax(0,.9fr);align-items:center}
+@media (max-width:1000px){.fut{grid-template-columns:1fr}.fut .arrow{height:36px}.fut .arrow svg{transform:rotate(90deg)}}
+.dests{display:grid;gap:10px}
+
+/* 3. Layer stack (not a flow) */
+.layers{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+@media (max-width:900px){.layers{grid-template-columns:1fr}}
+.stack{display:grid;gap:14px}
+.grp{display:grid;gap:6px}
+.grp-h{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2)}
+.grp-h .i{color:var(--accent)}
+.band{display:grid;grid-template-columns:160px minmax(0,1fr);gap:4px 16px;align-items:baseline;padding:12px 16px;border-radius:12px;background:var(--raised);border:1px solid var(--line)}
+@media (max-width:560px){.band{grid-template-columns:1fr}}
+.band b{font-size:15px;font-weight:600}
+.band span{font-size:14px;color:var(--ink-2)}
+.band.base{background:var(--surface);border-style:dashed;border-color:var(--line-strong)}
+.band.top{background:var(--accent-fill);border-color:var(--accent-fill)}
+.band.top b,.band.top span{color:#FFFFFF}
+.band-tags{grid-column:2;display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+@media (max-width:560px){.band-tags{grid-column:1}}
+.tag-l{font-size:13px;font-weight:500;color:#FFFFFF;border:1px solid rgba(255,255,255,.6);border-radius:6px;padding:2px 8px}
+.readers{padding:16px}
+.readers h4{margin:0 0 10px;font-size:16px;font-weight:600}
+.readers ul{margin:0;padding:0;list-style:none;display:grid;gap:12px}
+.readers li{display:flex;gap:10px;align-items:flex-start}
+.readers li .i{color:var(--accent);margin-top:2px}
+.readers li b{display:block;font-size:15px;font-weight:600}
+.readers li span{display:block;font-size:14px;color:var(--ink-2)}
+.opts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:12px}
+@media (max-width:820px){.opts{grid-template-columns:1fr}}
+.opt{padding:16px;display:grid;gap:10px;align-content:start}
+.opt.hl{border-color:var(--accent)}
+.opt-h{display:flex;gap:10px;align-items:flex-start}
+.opt-h .i{color:var(--accent);margin-top:2px}
+.opt-h b{display:block;font-size:16px;font-weight:600}
+.opt-h span{display:block;font-size:14px;color:var(--ink-2)}
+.opt ul,.opt ol{margin:0;padding-left:20px;font-size:14px;color:var(--ink-2);display:grid;gap:4px}
+
+/* 4. Direct tools vs Global Agent */
+.ask-q{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;background:var(--accent-soft);border:1px solid var(--accent-line);font-size:15px;margin-bottom:12px}
+.ask-q .i{color:var(--accent)}
+.ways{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+@media (max-width:820px){.ways{grid-template-columns:1fr}}
+.way{padding:16px;display:grid;gap:12px;align-content:start}
+.way.hl{border-color:var(--accent);border-width:1.5px}
+.way-h b{display:block;font-size:17px;font-weight:600}
+.way-h span{display:block;font-size:14px;color:var(--ink-2)}
+.tool-steps{margin:0;padding:0;list-style:none;counter-reset:ts;display:grid;gap:8px}
+.tool-steps li{counter-increment:ts;display:grid;grid-template-columns:26px minmax(0,1fr);column-gap:10px;row-gap:2px;align-items:baseline;font-size:14px}
+.tool-steps li::before{content:counter(ts);grid-row:span 2;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--surface);border:1px solid var(--line-strong);font-size:12px;font-weight:600}
+.tool-steps code{color:var(--accent);font-size:13px}
+.tool-steps span{color:var(--ink-2)}
+.tool-steps .inside{color:var(--ink);font-weight:600}
+.tool-steps .tn{color:var(--ink-2)}
+.fit{padding:10px 12px;border-radius:10px;background:var(--surface);font-size:14px;display:grid;gap:2px}
+.fit b{font-weight:600}
+.fit span{color:var(--ink-2)}
+.whys{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:900px){.whys{grid-template-columns:1fr 1fr}}
+@media (max-width:520px){.whys{grid-template-columns:1fr}}
+.why{padding:14px;display:grid;gap:4px;align-content:start}
+.why b{font-size:15px;font-weight:600}
+.why span{font-size:14px;color:var(--ink-2)}
+.mcp-foot{margin-top:16px;display:grid;gap:4px}
+
+/* 3. Future: context pipeline */
+.ctx-types{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.ctx-types li{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:4px 10px;font-size:13px;font-weight:500}
+.hub .sublabel{font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;opacity:.85;margin:4px 0 0}
+
+footer{border-top:1px solid var(--line);padding-block:32px 48px;font-size:14px;color:var(--ink-2)}
+footer ul{margin:8px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:6px 16px}
+footer a{color:var(--ink-2)}
+footer a:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+
+<!-- Icon sprite: simple line icons drawn inline so they render without a font download -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-laptop" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/></symbol>
+  <symbol id="i-tv" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V11M10 20V5M16 20v-6M21 20H3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-dash" viewBox="0 0 24 24"><path d="M7 12h10"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.4-7 10-4-1.6-7-5.5-7-10V6z"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 24 24"><circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="7" r="2"/><path d="M6 7v10M18 9c0 5-7 4-11.5 8.5"/></symbol>
+  <symbol id="i-sync" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M18 3v4h-4M6 21v-4h4"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-org" viewBox="0 0 24 24"><path d="M4 21V4h10v17M14 10h6v11M3 21h18M8 8h2M8 12h2M8 16h2"/></symbol>
+  <symbol id="i-agent" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18 16l.8 2.2L21 19l-2.2.8L18 22l-.8-2.2L15 19l2.2-.8z"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 5h16l-6 7v6l-4 2v-8z"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 8v4l3 2"/></symbol>
+</svg>
+
+<nav class="nav" aria-label="Sections">
+  <div class="wrap">
+    <!-- TODO: Replace with official Amplitude logo from brand.amplitude.com -->
+    <div class="logo-placeholder" aria-label="Amplitude logo placeholder">Logo</div>
+    <ul class="nav-links">
+      <li><a href="#data-model">Data model</a></li>
+      <li><a href="#bigquery">BigQuery</a></li>
+      <li><a href="#semantic-layer">Semantic layer</a></li>
+      <li><a href="#mcp">MCP</a></li>
+      <li><a href="#governance">Governance</a></li>
+    </ul>
+    <input type="checkbox" id="tt" class="vh" aria-label="Switch between light and dark mode">
+    <label for="tt" class="theme-btn"><span class="when-light"><svg class="i sm"><use href="#i-moon"/></svg></span><span class="when-dark"><svg class="i sm"><use href="#i-sun"/></svg></span><span class="when-light lbl">Dark</span><span class="when-dark lbl">Light</span></label>
+  </div>
+</nav>
+
+<main>
+<header class="hero wrap">
+  <p class="eyebrow">Data and analytics walkthrough</p>
+  <h1>How your data moves through Amplitude</h1>
+  <p class="lede">One example viewer, followed from a single event to your warehouse, your semantic layer, your AI tools, and the controls around them.</p>
+  <ol class="toc">
+    <li><a href="#data-model"><span class="n">1</span>Data model</a></li>
+    <li><a href="#bigquery"><span class="n">2</span>BigQuery export</a></li>
+    <li><a href="#semantic-layer"><span class="n">3</span>Semantic layer and AI Context</a></li>
+    <li><a href="#mcp"><span class="n">4</span>MCP</a></li>
+    <li><a href="#governance"><span class="n">5</span>Governance</a></li>
+  </ol>
+</header>
+
+<!-- 1. Data model -->
+<section class="part" id="data-model">
+  <div class="wrap">
+    <div class="part-head">
+      <div>
+        <p class="eyebrow">1 · Data model</p>
+        <h2>Everything starts as one event</h2>
+      </div>
+      <ul class="points">
+        <li>An event is one action, by one person, at one time.</li>
+        <li>It carries IDs, a name, a timestamp and properties.</li>
+        <li>Amplitude adds fields on arrival, then resolves the person.</li>
+      </ul>
+    </div>
+
+    <div class="stage">
+      <div class="anatomy">
+<pre class="json" id="json" aria-label="Example event payload"><span class="ln">{</span><span class="ln" data-k="what">  <span class="key">"event_type"</span>: <span class="s">"Playback Started"</span>,</span><span class="ln" data-k="what">  <span class="key">"time"</span>: 1790885640000,        <span class="cm">// ms since epoch</span></span><span class="ln" data-k="who">  <span class="key">"user_id"</span>: <span class="s">"u_5521"</span>,</span><span class="ln" data-k="who">  <span class="key">"device_id"</span>: <span class="s">"web-7f3a"</span>,</span><span class="ln" data-k="what">  <span class="key">"session_id"</span>: 1790885400000,</span><span class="ln" data-k="what">  <span class="key">"insert_id"</span>: <span class="s">"b1c9e0d2-4f6a"</span>,</span><span class="ln" data-k="props">  <span class="key">"event_properties"</span>: {</span><span class="ln" data-k="props">    <span class="key">"content_id"</span>: <span class="s">"s01e03"</span>,</span><span class="ln" data-k="props">    <span class="key">"content_genre"</span>: <span class="s">"Drama"</span>,</span><span class="ln" data-k="props">    <span class="key">"row_name"</span>: <span class="s">"Continue Watching"</span>,</span><span class="ln" data-k="props">    <span class="key">"row_position"</span>: 2</span><span class="ln" data-k="props">  },</span><span class="ln" data-k="user">  <span class="key">"user_properties"</span>: { <span class="key">"plan_type"</span>: <span class="s">"Premium"</span> },</span><span class="ln" data-k="user">  <span class="key">"groups"</span>: { <span class="key">"household"</span>: <span class="s">"hh_204"</span> },</span><span class="ln" data-k="ctx">  <span class="key">"platform"</span>: <span class="s">"Web"</span>,</span><span class="ln" data-k="ctx">  <span class="key">"os_name"</span>: <span class="s">"Chrome"</span>,</span><span class="ln" data-k="ctx">  <span class="key">"app_version"</span>: <span class="s">"4.12.0"</span>,</span><span class="ln" data-k="ctx">  <span class="key">"ip"</span>: <span class="s">"$remote"</span></span><span class="ln">}</span></pre>
+
+        <div>
+          <div class="legend" id="legend">
+            <button class="leg" type="button" data-k="who"><i style="background:var(--c-who)"></i><div><b>Who</b><span><code>user_id</code> and <code>device_id</code>. Send at least one.</span></div></button>
+            <button class="leg" type="button" data-k="what"><i style="background:var(--c-what)"></i><div><b>What and when</b><span><code>event_type</code> is required. <code>insert_id</code> drops repeats sent within 7 days.</span></div></button>
+            <button class="leg" type="button" data-k="props"><i style="background:var(--c-props)"></i><div><b>Event properties</b><span>Detail about this one action. Nested objects and arrays work.</span></div></button>
+            <button class="leg" type="button" data-k="user"><i style="background:var(--c-user)"></i><div><b>User and group</b><span>User properties update the person. <code>groups</code> tags a household. Groups need the Accounts add-on.</span></div></button>
+            <button class="leg" type="button" data-k="ctx"><i style="background:var(--c-ctx)"></i><div><b>Context</b><span>Device and app. Amplitude looks up city, region, country and DMA from <code>ip</code>.</span></div></button>
+          </div>
+          <div class="card added">
+            <h4><svg class="i sm"><use href="#i-plus"/></svg>Amplitude adds on arrival</h4>
+            <div class="chips">
+              <span class="chip">amplitude_id</span><span class="chip">uuid</span><span class="chip">event_time</span><span class="chip">server_received_time</span><span class="chip">city · region · country</span><span class="chip">user_properties at that moment</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="sub-h">How three events become one user</h3>
+    <p class="sub-p">Our viewer browses on web, subscribes on the TV app, then logs in on web. Step through it.</p>
+    <div class="stepper">
+      <input type="radio" name="step" id="s1" class="vh" checked aria-label="Step 1">
+      <input type="radio" name="step" id="s2" class="vh" aria-label="Step 2">
+      <input type="radio" name="step" id="s3" class="vh" aria-label="Step 3">
+      <input type="radio" name="step" id="s4" class="vh" aria-label="Step 4">
+      <div class="stage">
+        <div class="journey">
+          <div class="lanes">
+            <article class="card ev" data-i="0">
+              <div class="ev-top"><svg class="i sm"><use href="#i-laptop"/></svg>Web browser<span class="when">Mon 20:14</span></div>
+              <div class="ev-name">Content Browsed</div>
+              <dl class="ids">
+                <div><dt>device_id</dt><dd>web-7f3a</dd></div>
+                <div><dt>user_id</dt><dd class="null">none</dd></div>
+                <div><dt>amplitude_id</dt><dd><span class="aid anon aid0-anon">101</span><span class="aid aid0-merged"><span class="was">101</span> 102</span></dd></div>
+              </dl>
+            </article>
+            <article class="card ev" data-i="1">
+              <div class="ev-top"><svg class="i sm"><use href="#i-tv"/></svg>TV app<span class="when">Tue 21:02</span></div>
+              <div class="ev-name">Subscription Started</div>
+              <dl class="ids">
+                <div><dt>device_id</dt><dd>tv-91c2</dd></div>
+                <div><dt>user_id</dt><dd>u_5521</dd></div>
+                <div><dt>amplitude_id</dt><dd><span class="aid">102</span></dd></div>
+              </dl>
+            </article>
+            <article class="card ev" data-i="2">
+              <div class="ev-top"><svg class="i sm"><use href="#i-laptop"/></svg>Web browser<span class="when">Thu 12:40</span></div>
+              <div class="ev-name">Login Completed</div>
+              <dl class="ids">
+                <div><dt>device_id</dt><dd>web-7f3a</dd></div>
+                <div><dt>user_id</dt><dd>u_5521</dd></div>
+                <div><dt>amplitude_id</dt><dd><span class="aid">102</span></dd></div>
+              </dl>
+            </article>
+          </div>
+          <aside class="card profile">
+            <h4>What Amplitude counts</h4>
+            <div class="pstate" data-s="1">
+              <div class="count"><b>1</b><span>unique user</span></div>
+              <div class="people"><span class="aid anon">101 · anonymous</span></div>
+              <p>No login yet. Amplitude gives device web-7f3a its own amplitude_id.</p>
+            </div>
+            <div class="pstate" data-s="2">
+              <div class="count"><b>2</b><span>unique users</span></div>
+              <div class="people"><span class="aid anon">101 · anonymous</span><span class="aid">102 · u_5521</span></div>
+              <p>A new device with a user_id. Amplitude creates 102. For now, it looks like two people.</p>
+            </div>
+            <div class="pstate" data-s="3">
+              <div class="count"><b>1</b><span>unique user</span></div>
+              <div class="people"><span class="aid">102 · u_5521</span></div>
+              <p>Device web-7f3a now sends u_5521. 101 never had a user_id, so Amplitude merges 101 into 102.</p>
+              <div class="merge-row">merge table row: amplitude_id 101 → merged_amplitude_id 102</div>
+            </div>
+            <div class="pstate" data-s="4">
+              <div class="count"><b>1</b><span>unique user</span></div>
+              <div class="people"><span class="aid">102 · u_5521</span><span class="aid anon">web-7f3a</span><span class="aid anon">tv-91c2</span></div>
+              <p>Two devices, three events, one person. The browsing before signup now counts toward this subscriber.</p>
+              <div class="merge-row">merge table row: amplitude_id 101 → merged_amplitude_id 102</div>
+            </div>
+          </aside>
+        </div>
+        <div class="controls">
+          <div class="ctl" data-s="1">
+            <span class="btn off" aria-hidden="true"><svg class="i sm"><use href="#i-left"/></svg>Back</span>
+            <label class="btn primary" for="s2">Next<svg class="i sm"><use href="#i-right"/></svg></label>
+            <span class="step-label">Step 1 of 4 · Anonymous visit on web</span>
+          </div>
+          <div class="ctl" data-s="2">
+            <label class="btn" for="s1"><svg class="i sm"><use href="#i-left"/></svg>Back</label>
+            <label class="btn primary" for="s3">Next<svg class="i sm"><use href="#i-right"/></svg></label>
+            <span class="step-label">Step 2 of 4 · Subscribes on the TV app</span>
+          </div>
+          <div class="ctl" data-s="3">
+            <label class="btn" for="s2"><svg class="i sm"><use href="#i-left"/></svg>Back</label>
+            <label class="btn primary" for="s4">Next<svg class="i sm"><use href="#i-right"/></svg></label>
+            <span class="step-label">Step 3 of 4 · Logs in on web</span>
+          </div>
+          <div class="ctl" data-s="4">
+            <label class="btn" for="s3"><svg class="i sm"><use href="#i-left"/></svg>Back</label>
+            <label class="btn" for="s1">Start again</label>
+            <span class="step-label">Step 4 of 4 · One user</span>
+          </div>
+          <div class="dots" aria-hidden="true">
+            <label for="s1"></label><label for="s2"></label><label for="s3"></label><label for="s4"></label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note"><strong>One rule:</strong> Amplitude can merge an anonymous ID into a known user. It can't merge two different user_ids. Send the same user_id from every platform.</p>
+  </div>
+</section>
+
+<!-- 2. BigQuery -->
+<section class="part" id="bigquery">
+  <div class="wrap">
+    <div class="part-head">
+      <div>
+        <p class="eyebrow">2 · Warehouse</p>
+        <h2>How those events reach BigQuery</h2>
+      </div>
+      <ul class="points">
+        <li>Amplitude processes each event, then exports in batches as often as every 5 minutes.</li>
+        <li>It lands in a dataset you own, loaded with your service account.</li>
+        <li>A second table holds every ID merge, so counts can match.</li>
+      </ul>
+    </div>
+
+    <div class="stage">
+      <div class="arch" role="img" aria-label="Architecture: apps send events to Amplitude, which processes, stores and exports them to a BigQuery dataset in your GCP project, read by Looker">
+        <svg viewBox="0 0 1120 380" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="a-head"/></marker>
+          </defs>
+          <!-- Your apps -->
+          <rect x="20" y="40" width="190" height="300" rx="14" class="a-box"/>
+          <circle cx="44" cy="68" r="11" class="a-badge"/><text x="44" y="72" class="a-bn">1</text>
+          <text x="62" y="73" class="a-t">Your apps</text>
+          <rect x="36" y="96" width="158" height="50" rx="8" class="a-in"/><text x="50" y="117" class="a-t2">Web</text><text x="50" y="135" class="a-s">Browser SDK</text>
+          <rect x="36" y="156" width="158" height="50" rx="8" class="a-in"/><text x="50" y="177" class="a-t2">TV app</text><text x="50" y="195" class="a-s">SDK or HTTP API</text>
+          <rect x="36" y="216" width="158" height="50" rx="8" class="a-in"/><text x="50" y="237" class="a-t2">Mobile</text><text x="50" y="255" class="a-s">iOS and Android SDKs</text>
+          <rect x="36" y="276" width="158" height="50" rx="8" class="a-in"/><text x="50" y="297" class="a-t2">Server</text><text x="50" y="315" class="a-s">HTTP API</text>
+          <path d="M210 190 H256" class="a-ln" marker-end="url(#ah)"/>
+
+          <!-- Amplitude -->
+          <rect x="260" y="40" width="400" height="300" rx="16" class="a-amp"/>
+          <text x="284" y="73" class="a-t">Amplitude</text>
+          <rect x="284" y="92" width="170" height="54" rx="8" class="a-in2"/><text x="298" y="114" class="a-t2">Ingestion</text><text x="298" y="133" class="a-s">Batched uploads</text>
+          <path d="M369 146 V158" class="a-ln" marker-end="url(#ah)"/>
+          <rect x="284" y="160" width="170" height="72" rx="8" class="a-in2"/>
+          <circle cx="438" cy="176" r="11" class="a-badge"/><text x="438" y="180" class="a-bn">2</text>
+          <text x="298" y="182" class="a-t2">Processing</text><text x="298" y="201" class="a-s">Dedupe on insert_id</text><text x="298" y="219" class="a-s">Resolve IDs, enrich</text>
+          <path d="M369 232 V244" class="a-ln" marker-end="url(#ah)"/>
+          <rect x="284" y="246" width="170" height="72" rx="8" class="a-in2"/><text x="298" y="268" class="a-t2">Storage and query</text><text x="298" y="287" class="a-s">Nova: charts, agents</text><text x="298" y="305" class="a-s">and the merge map</text>
+          <path d="M454 196 H470" class="a-ln" marker-end="url(#ah)"/>
+          <rect x="474" y="160" width="166" height="72" rx="8" class="a-in2"/>
+          <circle cx="624" cy="176" r="11" class="a-badge"/><text x="624" y="180" class="a-bn">3</text>
+          <text x="488" y="182" class="a-t2">Export job</text><text x="488" y="201" class="a-s">As often as every</text><text x="488" y="219" class="a-s">5 minutes</text>
+          <rect x="474" y="246" width="166" height="72" rx="8" class="a-in2"/>
+          <circle cx="624" cy="262" r="11" class="a-badge"/><text x="624" y="266" class="a-bn">5</text>
+          <text x="488" y="268" class="a-t2">Daily check</text><text x="488" y="287" class="a-s">Compare counts,</text><text x="488" y="305" class="a-s">backfill gaps</text>
+          <path d="M557 246 V234" class="a-ln a-dash" marker-end="url(#ah)"/>
+          <path d="M640 196 H696" class="a-ln" marker-end="url(#ah)"/>
+
+          <!-- Your GCP project -->
+          <rect x="700" y="40" width="260" height="300" rx="16" class="a-gcp"/>
+          <circle cx="724" cy="68" r="11" class="a-badge"/><text x="724" y="72" class="a-bn">4</text>
+          <text x="742" y="73" class="a-t">Your GCP project</text>
+          <rect x="720" y="92" width="220" height="54" rx="8" class="a-in"/><text x="734" y="114" class="a-t2">Data Transfer Service</text><text x="734" y="133" class="a-s">Your service account and key</text>
+          <path d="M830 146 V158" class="a-ln" marker-end="url(#ah)"/>
+          <rect x="720" y="160" width="220" height="164" rx="8" class="a-in"/>
+          <text x="734" y="183" class="a-t2">BigQuery dataset</text>
+          <rect x="734" y="194" width="192" height="36" rx="6" class="a-row"/><text x="746" y="217" class="a-m">Events table</text>
+          <rect x="734" y="236" width="192" height="36" rx="6" class="a-row"/><text x="746" y="259" class="a-m">Merge IDs table</text>
+          <rect x="734" y="278" width="192" height="36" rx="6" class="a-row"/><text x="746" y="301" class="a-m">deduplicated_ function</text>
+          <path d="M960 242 H986" class="a-ln" marker-end="url(#ah)"/>
+
+          <!-- BI -->
+          <rect x="990" y="200" width="120" height="84" rx="12" class="a-box"/>
+          <text x="1004" y="234" class="a-t">Looker</text><text x="1004" y="256" class="a-s">or any BI tool</text>
+        </svg>
+      </div>
+      <p class="arch-cap">The numbers match the steps below. Scroll sideways on a small screen.</p>
+
+      <div class="pipe">
+        <div class="card st">
+          <div class="st-top"><span class="st-n">1</span><div><h4>Collect</h4><div class="where">Your apps</div></div></div>
+          <ul><li>Web, TV and mobile SDKs, or the HTTP API</li><li>SDKs batch events before upload</li></ul>
+        </div>
+        <div class="card st">
+          <div class="st-top"><span class="st-n">2</span><div><h4>Process</h4><div class="where">Amplitude</div></div></div>
+          <ul><li>Drops repeats by <code>insert_id</code></li><li>Assigns <code>amplitude_id</code>, merges IDs</li><li>Adds location and timestamps</li></ul>
+        </div>
+        <div class="card st">
+          <div class="st-top"><span class="st-n">3</span><div><h4>Batch</h4><div class="where">Amplitude</div></div></div>
+          <ul><li>As often as every 5 minutes</li><li>Best effort: under heavy load a batch can cover a longer window</li><li>Optional event filters</li></ul>
+        </div>
+        <div class="card st you">
+          <div class="st-top"><span class="st-n">4</span><div><h4>Load</h4><div class="where">Your BigQuery project</div></div></div>
+          <ul><li>Event table, partitioned by <code>event_time</code> date</li><li>Merge IDs table</li><li>Each sync finishes within ten minutes</li></ul>
+        </div>
+        <div class="card st">
+          <div class="st-top"><span class="st-n">5</span><div><h4>Check</h4><div class="where">Amplitude, daily</div></div></div>
+          <ul><li>Compares recent event counts</li><li>Backfills any day that doesn't match</li><li>Every job shows in Amplitude</li></ul>
+        </div>
+      </div>
+
+      <div class="setup">
+        <div class="card">
+          <h4><svg class="i sm"><use href="#i-key"/></svg>Set up once, in your GCP project</h4>
+          <ol>
+            <li>Turn on the BigQuery Data Transfer Service.</li>
+            <li>Create a service account with BigQuery User, BigQuery Data Editor, and a custom role with <code>bigquery.transfers.get</code>, <code>bigquery.transfers.update</code> and <code>bigquery.datasets.update</code>.</li>
+            <li>Upload its JSON key in Amplitude, under Data, Catalog, Destinations.</li>
+          </ol>
+        </div>
+        <div class="card">
+          <h4><svg class="i sm"><use href="#i-history"/></svg>Choose what to send</h4>
+          <ul>
+            <li>Events ingested from today forward, merged Amplitude IDs, or both.</li>
+            <li>Need history? Start a manual sync for past dates.</li>
+            <li>Backfills can create duplicates. Query through the <code>deduplicated_</code> table function Amplitude creates.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="sub-h">Our viewer's four events, as rows</h3>
+    <p class="sub-p">The same events from section 1. Properties arrive as JSON columns. Read them with <code>JSON_VALUE(event_properties, '$.content_genre')</code>.</p>
+    <div class="tbl-wrap">
+      <table class="row">
+        <thead><tr>
+          <th>event_time<small>TIMESTAMP, UTC</small></th>
+          <th>event_type<small>STRING</small></th>
+          <th>user_id<small>STRING</small></th>
+          <th>device_id<small>STRING</small></th>
+          <th>amplitude_id<small>BIGNUMERIC</small></th>
+          <th>event_properties<small>JSON</small></th>
+          <th>user_properties<small>JSON</small></th>
+          <th>uuid<small>STRING</small></th>
+        </tr></thead>
+        <tbody>
+          <tr><td>2026-09-28 20:14:00</td><td>Content Browsed</td><td class="nul">NULL</td><td>web-7f3a</td><td class="flag">101</td><td class="json-cell">{"content_genre":"Drama","row_name":"Trending"}</td><td class="json-cell">{}</td><td>1c2e8d40-…</td></tr>
+          <tr><td>2026-09-29 21:02:00</td><td>Subscription Started</td><td>u_5521</td><td>tv-91c2</td><td>102</td><td class="json-cell">{"plan_type":"Premium","billing_period":"monthly"}</td><td class="json-cell">{"plan_type":"Premium"}</td><td>7a91f3b2-…</td></tr>
+          <tr><td>2026-10-01 12:40:00</td><td>Login Completed</td><td>u_5521</td><td>web-7f3a</td><td>102</td><td class="json-cell">{"method":"email"}</td><td class="json-cell">{"plan_type":"Premium"}</td><td>3f0d5c19-…</td></tr>
+          <tr><td>2026-10-01 20:14:00</td><td>Playback Started</td><td>u_5521</td><td>web-7f3a</td><td>102</td><td class="json-cell">{"content_genre":"Drama","row_position":2, …}</td><td class="json-cell">{"plan_type":"Premium"}</td><td>bf0b9b2a-…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="merge-mini">
+      <span class="mm-label">Merge IDs table</span>
+      <div class="tbl-wrap">
+        <table class="row small">
+          <thead><tr><th>amplitude_id</th><th>merged_amplitude_id</th><th>merge_event_time</th></tr></thead>
+          <tbody><tr><td class="flag">101</td><td>102</td><td>2026-10-01 12:40:00</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <p class="note"><strong>Row one keeps amplitude_id 101.</strong> It was exported before the login. The merge table maps 101 to 102, so the join below counts one person.</p>
+
+    <div class="code">
+      <div class="code-head"><b>Weekly users, with and without the merge table</b><button class="copy" id="copy" type="button">Copy</button></div>
+<pre id="sql"><span class="c">-- Project, dataset and table names are placeholders. Use the ones in your export.</span>
+<span class="k">SELECT</span>
+  <span class="k">COUNT</span>(<span class="k">DISTINCT</span> e.amplitude_id) <span class="k">AS</span> without_merge,  <span class="c">-- 2 for our viewer</span>
+  <span class="k">COUNT</span>(<span class="k">DISTINCT</span> <span class="k">COALESCE</span>(m.merged_amplitude_id, e.amplitude_id)) <span class="k">AS</span> with_merge  <span class="c">-- 1</span>
+<span class="k">FROM</span> `my-project.amplitude.deduplicated_EVENTS_123456`('2026-09-28', '2026-10-04') e
+<span class="k">LEFT JOIN</span> `my-project.amplitude.MERGE_IDS_123456` m
+  <span class="k">ON</span> e.amplitude_id = m.amplitude_id;</pre>
+    </div>
+    <p class="note"><strong>Before you compare with a chart:</strong> <code>event_time</code> is UTC, so match your project's time zone first.</p>
+  </div>
+</section>
+
+<!-- 3. Semantic layer and AI Context -->
+<section class="part" id="semantic-layer">
+  <div class="wrap">
+    <div class="part-head">
+      <div>
+        <p class="eyebrow">3 · Semantic layer and AI Context</p>
+        <h2>Amplitude's behavioral semantic layer</h2>
+      </div>
+      <ul class="points">
+        <li>Amplitude builds meaning from work your team already does.</li>
+        <li>AI Context adds what Amplitude can't infer.</li>
+        <li>That can include definitions from your warehouse, added by hand or over MCP.</li>
+      </ul>
+    </div>
+
+    <div class="semwrap">
+    <input type="radio" name="sem" id="sem-now" class="vh" checked>
+    <input type="radio" name="sem" id="sem-next" class="vh">
+    <div class="seg sem-toggle" aria-hidden="true">
+      <label for="sem-now">How it works today</label>
+      <label for="sem-next">Future vision</label>
+    </div>
+
+    <div class="pane-now">
+      <div class="stage">
+        <div class="layers">
+          <div class="stack">
+            <div class="grp">
+              <div class="grp-h"><svg class="i sm"><use href="#i-plus"/></svg>Added by you</div>
+              <div class="band top">
+                <b>AI Context</b>
+                <span>Your rules and reference files, for what Amplitude can't infer. This is where meaning from your warehouse goes.</span>
+                <div class="band-tags"><span class="tag-l">Paste or upload in AI Controls</span><span class="tag-l">Push over MCP</span></div>
+              </div>
+            </div>
+            <div class="grp">
+              <div class="grp-h"><svg class="i sm"><use href="#i-agent"/></svg>Built as your team works</div>
+              <div class="band"><b>Official content</b><span>Dashboards and charts marked official, saved cohorts and metrics. The team's agreed version of a number.</span></div>
+              <div class="band"><b>Usage</b><span>Which events, charts and dashboards your team relies on most.</span></div>
+              <div class="band"><b>Taxonomy</b><span>Event and property names and descriptions. Amplitude can draft descriptions from your reference files.</span></div>
+              <div class="band base"><b>Your events</b><span>What people did, in order, across web, TV and mobile.</span></div>
+            </div>
+          </div>
+          <div class="card readers">
+            <h4>Who reads it</h4>
+            <ul>
+              <li><svg class="i sm"><use href="#i-agent"/></svg><div><b>Global Agent</b><span>Every layer, including uploaded files</span></div></li>
+              <li><svg class="i sm"><use href="#i-clock"/></svg><div><b>Custom agents</b><span>Scheduled analyses</span></div></li>
+              <li><svg class="i sm"><use href="#i-sync"/></svg><div><b>MCP clients</b><span>Taxonomy, content and AI Context text (section 4)</span></div></li>
+            </ul>
+          </div>
+        </div>
+        <p class="note"><strong>Why it matters:</strong> your warehouse knows who paid and what counts as churn. Amplitude knows what people did before and after, and where they dropped off. AI Context lets an agent use both.</p>
+      </div>
+
+      <h3 class="sub-h">Adding meaning from your warehouse</h3>
+      <p class="sub-p">Your warehouse defines subscriptions, revenue and churn. Put those rules in AI Context. They don't sync on their own, so pick how you keep them current.</p>
+      <div class="opts">
+        <div class="card opt">
+          <div class="opt-h"><svg class="i"><use href="#i-upload"/></svg><div><b>By hand, in AI Controls</b><span>Good for rules that rarely change</span></div></div>
+          <ul>
+            <li>Edit the org or project markdown, or upload a markdown file</li>
+            <li>Upload reference files, such as a data dictionary</li>
+            <li>Admins only</li>
+          </ul>
+        </div>
+        <div class="card opt hl">
+          <div class="opt-h"><svg class="i"><use href="#i-sync"/></svg><div><b>Over MCP, from your repo</b><span>Good for keeping pace with model changes</span></div></div>
+          <ol>
+            <li>A pull request to your semantic layer merges.</li>
+            <li>An agent, such as Claude Code in your CI, writes the markdown.</li>
+            <li>It calls <code>manage_amp_context</code> (<code>set_org_context</code> or <code>set_project_context</code>) as an admin.</li>
+            <li>Agents use the new text on the next question.</li>
+          </ol>
+        </div>
+      </div>
+      <ul class="facts">
+        <li>Each MCP call replaces that scope's full text</li>
+        <li>10,000 characters per scope</li>
+        <li>Reference files upload in AI Controls only</li>
+        <li>Need the values too? Import fields like subscription_status with BigQuery Data Import</li>
+      </ul>
+
+      <h3 class="sub-h">What lands in AI Context</h3>
+      <p class="sub-p">Global Agent applies it for every person who asks.</p>
+      <div class="ctx-row">
+        <div class="card src">
+          <div class="src-top"><svg class="i sm"><use href="#i-org"/></svg>Organization context</div>
+          <span class="tag">All projects</span>
+<pre>## Monthly churn
+- Base = `subscription_status`
+  "active" on day 1 of the month
+- Churned = in base, not "active"
+  on the last day
+- Leave out free-trial cancels
+- Status comes from billing,
+  imported daily</pre>
+        </div>
+        <div class="card src">
+          <div class="src-top"><svg class="i sm"><use href="#i-folder"/></svg>Project context</div>
+          <span class="tag">Wins on conflict</span>
+<pre>## Streaming app
+- "Viewer" = 1+ Playback Started
+  in the period</pre>
+        </div>
+        <div class="card src">
+          <div class="src-top"><svg class="i sm"><use href="#i-doc"/></svg>Reference files</div>
+          <span class="tag">PDF, CSV, XLSX and more</span>
+<pre>data_dictionary.xlsx
+metric_definitions.pdf</pre>
+        </div>
+        <div class="card answer">
+          <div class="q">A product manager and an analyst both ask: "What was churn in September?"</div>
+          <div class="a"><b>Both get:</b> subscribers active on 1 September who weren't active on 30 September, free-trial cancels left out.</div>
+        </div>
+      </div>
+      <ul class="facts">
+        <li>Up to 50 files per scope, 25 MB each</li>
+        <li>Project context overrides org context</li>
+        <li>Admins can review Global Agent threads in Audit</li>
+      </ul>
+    </div>
+
+    <div class="pane-next">
+      <div class="vision-banner"><span class="soon">Future vision</span><span>Roadmap direction, not a shipped feature. Nothing in this view is available today.</span></div>
+      <div class="stage">
+        <div class="fut">
+          <div class="card node">
+            <div class="node-top"><div class="node-ic"><svg class="i"><use href="#i-phone"/></svg></div><div><h4>Amplitude SDKs</h4><p class="sub">The single source, collected once</p></div></div>
+            <ul>
+              <li><svg class="i sm"><use href="#i-laptop"/></svg>Web, TV, iOS and Android SDKs</li>
+              <li><svg class="i sm"><use href="#i-cpu"/></svg>Server-side SDKs and HTTP API</li>
+              <li><svg class="i sm"><use href="#i-agent"/></svg>AI SDK for the agents in your product</li>
+            </ul>
+          </div>
+          <div class="arrow" aria-hidden="true"><svg viewBox="0 0 40 16"><path d="M2 8 H32"/><polygon points="32,3 39,8 32,13"/></svg></div>
+          <div class="hub">
+            <h4><svg class="i"><use href="#i-sync"/></svg>Amplitude context pipeline</h4>
+            <p class="sublabel">Captures more than clicks</p>
+            <ul class="ctx-types">
+              <li>Behavioral events</li><li>Session replay</li><li>Evals and observability</li><li>Experiment exposures</li><li>AI feedback</li>
+            </ul>
+            <p class="sublabel">Processes it in flight</p>
+            <ul class="steps-inline">
+              <li>Validate</li><li>Dedupe</li><li>Resolve identity</li><li>Transform and route</li>
+            </ul>
+            <p class="hub-p">You see what happens to each record, and choose where it goes.</p>
+          </div>
+          <div class="arrow" aria-hidden="true"><svg viewBox="0 0 40 16"><path d="M2 8 H32"/><polygon points="32,3 39,8 32,13"/></svg></div>
+          <div class="dests">
+            <div class="card node">
+              <div class="node-top"><div class="node-ic"><svg class="i"><use href="#i-db"/></svg></div><div><h4>Your warehouse</h4><p class="sub">All of it, in your account</p></div></div>
+              <ul>
+                <li><svg class="i sm"><use href="#i-check"/></svg>Events, plus replays and feedback to analyze alongside them</li>
+                <li><svg class="i sm"><use href="#i-check"/></svg>What Amplitude computed: merged IDs, transformation config, cohorts and metrics as SQL</li>
+              </ul>
+            </div>
+            <div class="card node hl">
+              <div class="node-top"><div class="node-ic"><svg class="i"><use href="#i-clock"/></svg></div><div><h4>Nova cache layer</h4><p class="sub">The high-value context you choose</p></div></div>
+              <ul>
+                <li><svg class="i sm"><use href="#i-check"/></svg>Indexed for fast funnels, retention, journeys and impact analysis</li>
+                <li><svg class="i sm"><use href="#i-check"/></svg>Pull more in from the warehouse later</li>
+              </ul>
+            </div>
+          </div>
+          <div class="arrow" aria-hidden="true"><svg viewBox="0 0 40 16"><path d="M2 8 H32"/><polygon points="32,3 39,8 32,13"/></svg></div>
+          <div class="consumers">
+            <div class="card consumer"><svg class="i sm"><use href="#i-agent"/></svg>Global Agent and Wave read both</div>
+            <div class="card consumer"><svg class="i sm"><use href="#i-chart"/></svg>Experiments and agents act on it</div>
+            <div class="card consumer"><svg class="i sm"><use href="#i-sync"/></svg>Your BI and AI tools read the warehouse</div>
+          </div>
+        </div>
+      </div>
+      <ul class="facts">
+        <li>One SDK, one collection path</li>
+        <li>Collect everything now, choose what to analyze later</li>
+        <li>Same IDs and definitions in both places</li>
+        <li>The warehouse is a first-class destination, not a copy</li>
+      </ul>
+      <p class="note"><strong>The goal:</strong> Amplitude becomes the context pipeline for your warehouse. It carries the behavior, replays and feedback the warehouse can't capture on its own, with identity already resolved.</p>
+    </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. MCP -->
+<section class="part" id="mcp">
+  <div class="wrap">
+    <div class="part-head">
+      <div>
+        <p class="eyebrow">4 · MCP</p>
+        <h2>Use Amplitude from your own AI tools</h2>
+      </div>
+      <ul class="points">
+        <li>Claude, Gemini, ChatGPT and Cursor connect to Amplitude MCP over OAuth.</li>
+        <li>Your tool can call Amplitude's tools itself, or hand the question to Global Agent.</li>
+        <li>Each person sees only what their Amplitude role allows.</li>
+      </ul>
+    </div>
+
+    <div class="stage">
+      <div class="ask-q"><svg class="i sm"><use href="#i-user"/></svg><span>An analyst asks Claude: <b>"Why did TV app viewers drop last week?"</b></span></div>
+      <div class="ways">
+        <div class="card way">
+          <div class="way-h"><b>Call tools directly</b><span>Your AI tool plans every step</span></div>
+          <ol class="tool-steps">
+            <li><code>get_amplitude_context</code><span>Loads AI Context text and settings</span></li>
+            <li><span class="tn"><code>search</code> · <code>get_amp_taxonomy</code></span><span>Guesses which events and properties fit</span></li>
+            <li><code>query_amplitude_data</code><span>Runs each query, one at a time</span></li>
+            <li><code>render_amplitude_chart</code><span>Draws the result</span></li>
+          </ol>
+          <div class="fit"><b>Best for</b><span>Simple lookups, a chart you already know, a fully defined query. Faster and cheaper, and you see every step.</span></div>
+        </div>
+        <div class="card way hl">
+          <div class="way-h"><b>Ask Global Agent</b><span>Amplitude's own agent does the work</span></div>
+          <ol class="tool-steps">
+            <li><code>ask_global_agent</code><span>Sends the full question</span></li>
+            <li><span class="inside">Inside Amplitude</span><span>Uses your rules, official content, past analyses and taxonomy to pick events, run queries and build charts</span></li>
+            <li><code>get_global_agent_response</code><span>Returns the answer with chart links</span></li>
+          </ol>
+          <div class="fit"><b>Best for</b><span>"Why" questions, multi-step investigations, and building charts in a large or messy taxonomy.</span></div>
+        </div>
+      </div>
+
+      <h3 class="sub-h">Why hand it to Global Agent? Context.</h3>
+      <div class="whys">
+        <div class="card why"><b>It sees more</b><span>Uploaded AI Context files reach Global Agent. Direct tools only return the text.</span></div>
+        <div class="card why"><b>It knows your content</b><span>It searches your team's existing charts, dashboards and past analyses before it builds new ones.</span></div>
+        <div class="card why"><b>It picks the right events</b><span>Org-specific taxonomy knowledge, not a guess from event names.</span></div>
+        <div class="card why"><b>Your tool stays light</b><span>Claude gets the answer and links, not every intermediate query result.</span></div>
+      </div>
+      <ul class="facts">
+        <li>Runs take about 10 seconds to a few minutes</li>
+        <li>Global Agent can't see your Claude chat, so include the full question</li>
+        <li>Follow-ups continue the same Global Agent thread</li>
+      </ul>
+
+      <div class="mcp-foot">
+        <div class="clients"><span class="client">Claude</span><span class="client">Claude Code</span><span class="client">Gemini CLI</span><span class="client">ChatGPT</span><span class="client">Cursor</span><span class="client">Any MCP client with OAuth</span></div>
+        <p class="note"><strong>Limits either way:</strong> only projects the user's role covers, and no writes unless the role grants Use MCP (write).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. Governance -->
+<section class="part" id="governance">
+  <div class="wrap">
+    <div class="part-head">
+      <div>
+        <p class="eyebrow">5 · Governance</p>
+        <h2>You decide who can do what</h2>
+      </div>
+      <ul class="points">
+        <li>Each row maps to an admin setting or a role permission.</li>
+        <li>Switch views to see a custom Power user role.</li>
+        <li>Custom roles need the Enterprise plan.</li>
+      </ul>
+    </div>
+
+    <div class="govwrap">
+    <input type="radio" name="gov" id="g-def" class="vh" checked>
+    <input type="radio" name="gov" id="g-lock" class="vh">
+    <div class="seg" aria-hidden="true">
+      <label for="g-def">Default roles</label>
+      <label for="g-lock">Example: add a Power user role</label>
+    </div>
+
+    <div class="grid-wrap g-def-tbl">
+      <table class="perm">
+        <thead><tr><th scope="col" style="text-align:left">Capability</th><th scope="col">Admin</th><th scope="col">Manager</th><th scope="col">Member</th><th scope="col">Viewer</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Edit AI Context<small>Org admins only, in AI Controls or over MCP</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
+          <tr><th scope="row">Use Global Agent<small>When set to On for organization</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td></tr>
+          <tr><th scope="row">Create custom agents<small>Agents use the creator’s data access</small></th><td colspan="4"><span class="cell-note">Anyone with Agents access, until you restrict it by role</span></td></tr>
+          <tr><th scope="row">Use MCP (read)<small>Every default role</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td></tr>
+          <tr><th scope="row">Use MCP (write)<small>Member, Manager and Admin</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="grid-wrap g-lock-tbl">
+      <table class="perm">
+        <thead><tr><th scope="col" style="text-align:left">Capability</th><th scope="col">Admin</th><th scope="col" class="pu">Power user<small>Custom role</small></th><th scope="col">Member</th><th scope="col">Viewer</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Edit AI Context<small>Org admins only, in AI Controls or over MCP</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
+          <tr><th scope="row">Use Global Agent<small>Granted per role</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
+          <tr><th scope="row">Create custom agents<small>Granted to the Power user role</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
+          <tr><th scope="row">Use MCP (read)<small>Per role, per project</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
+          <tr><th scope="row">Use MCP (write)<small>Per role, per project</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    </div>
+
+    <div class="gov-notes">
+      <div><svg class="i"><use href="#i-shield"/></svg><span>MCP role permissions apply to admins too. If a role doesn't grant it, the call fails.</span></div>
+      <div><svg class="i"><use href="#i-eye"/></svg><span>Admin preview limits Global Agent to admins while you test.</span></div>
+      <div><svg class="i"><use href="#i-search"/></svg><span>Agents inherit their creator's data access. Admins can audit Global Agent threads.</span></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    Reference docs
+    <ul>
+      <li><a href="https://amplitude.com/docs/apis/analytics/http-v2">HTTP V2 API</a></li>
+      <li><a href="https://amplitude.com/docs/data/sources/instrument-track-unique-users">Track unique users</a></li>
+      <li><a href="https://amplitude.com/docs/data/destination-catalog/google-bigquery">BigQuery export</a></li>
+      <li><a href="https://amplitude.com/docs/data/source-catalog/bigquery">BigQuery Data Import</a></li>
+      <li><a href="https://amplitude.com/docs/amplitude-ai/ai-context">AI Context</a></li>
+      <li><a href="https://amplitude.com/docs/amplitude-ai/ai-controls">AI Controls</a></li>
+      <li><a href="https://amplitude.com/docs/amplitude-ai/amplitude-mcp">Amplitude MCP</a></li>
+      <li><a href="https://amplitude.com/docs/amplitude-ai/custom-agents">Custom Agents</a></li>
+      <li><a href="https://amplitude.com/docs/admin/account-management/role-based-access-controls-rbac">RBAC</a></li>
+    </ul>
+  </div>
+</footer>
+
+<script>
+/* Everything interactive works without JavaScript. This script only adds:
+   remembering the theme choice, the Copy button, and the active nav link. */
+(function(){
+  var tt = document.getElementById('tt');
+  try { if (localStorage.getItem('themeFlip') === '1') tt.checked = true; } catch(e){}
+  tt.addEventListener('change', function(){
+    try { localStorage.setItem('themeFlip', tt.checked ? '1' : '0'); } catch(e){}
+  });
+
+  var copyBtn = document.getElementById('copy');
+  copyBtn.addEventListener('click', function(){
+    var txt = document.getElementById('sql').innerText;
+    var done = function(){ copyBtn.textContent = 'Copied'; setTimeout(function(){ copyBtn.textContent = 'Copy'; }, 1600); };
+    if (navigator.clipboard) navigator.clipboard.writeText(txt).then(done, function(){ copyBtn.textContent = 'Select the text to copy'; });
+    else copyBtn.textContent = 'Select the text to copy';
+  });
+
+  var links = document.querySelectorAll('.nav-links a');
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if (en.isIntersecting) links.forEach(function(a){ a.classList.toggle('active', a.getAttribute('href') === '#' + en.target.id); });
+      });
+    }, { rootMargin: '-40% 0px -55% 0px' });
+    document.querySelectorAll('section.part').forEach(function(s){ io.observe(s); });
+  }
+})();
+</script>
+</body>
+</html>
