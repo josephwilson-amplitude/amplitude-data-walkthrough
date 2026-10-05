@@ -356,7 +356,7 @@ table.row{border-collapse:collapse;width:100%;min-width:860px;font-size:13px}
 
 /* 5. Governance */
 .grid-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:16px;background:var(--raised);margin-top:16px}
-table.perm{width:100%;border-collapse:collapse;min-width:660px;font-size:15px}
+table.perm{width:100%;border-collapse:collapse;min-width:720px;font-size:15px}
 .perm th,.perm td{padding:14px 16px;text-align:center;border-bottom:1px solid var(--line)}
 .perm tr:last-child td,.perm tr:last-child th{border-bottom:0}
 .perm thead th{font-size:14px;font-weight:600;color:var(--ink);background:var(--surface)}
@@ -1026,7 +1026,6 @@ metric_definitions.pdf</pre>
     </div>
 
     <div class="pane-next">
-      <div class="vision-banner"><span class="soon">Future vision</span><span>Roadmap direction, not a shipped feature. Nothing in this view is available today.</span></div>
       <div class="stage">
         <div class="fut">
           <div class="card node">
@@ -1184,13 +1183,13 @@ metric_definitions.pdf</pre>
     </div>
     <div class="grid-wrap g-lock-tbl">
       <table class="perm">
-        <thead><tr><th scope="col" style="text-align:left">Capability</th><th scope="col">Admin</th><th scope="col" class="pu">Power user<small>Custom role</small></th><th scope="col">Member</th><th scope="col">Viewer</th></tr></thead>
+        <thead><tr><th scope="col" style="text-align:left">Capability</th><th scope="col">Admin</th><th scope="col" class="pu">Power user<small>New custom role</small></th><th scope="col">Manager</th><th scope="col">Member</th><th scope="col">Viewer</th></tr></thead>
         <tbody>
-          <tr><th scope="row">Edit AI Context<small>Org admins only, in AI Controls or over MCP</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
-          <tr><th scope="row">Use Global Agent<small>Granted per role</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
-          <tr><th scope="row">Create agents<small>Granted to the Power user role</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
-          <tr><th scope="row">Use MCP (read)<small>Per role, per project</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
-          <tr><th scope="row">Use MCP (write)<small>Per role, per project</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
+          <tr><th scope="row">Edit AI Context<small>Org admins only, in AI Controls or over MCP</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
+          <tr><th scope="row">Use Global Agent<small>Granted per role</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
+          <tr><th scope="row">Create agents<small>Granted to the Power user role</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
+          <tr><th scope="row">Use MCP (read)<small>Per role, per project</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
+          <tr><th scope="row">Use MCP (write)<small>Per role, per project</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
         </tbody>
       </table>
     </div>
