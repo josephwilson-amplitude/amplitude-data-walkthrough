@@ -585,8 +585,6 @@ footer a:hover{color:var(--accent)}
 
 <nav class="nav" aria-label="Sections">
   <div class="wrap">
-    <!-- TODO: Replace with official Amplitude logo from brand.amplitude.com -->
-    <div class="logo-placeholder" aria-label="Amplitude logo placeholder">Logo</div>
     <ul class="nav-links">
       <li><a href="#data-model">Data model</a></li>
       <li><a href="#bigquery">BigQuery</a></li>
@@ -594,8 +592,6 @@ footer a:hover{color:var(--accent)}
       <li><a href="#mcp">MCP</a></li>
       <li><a href="#governance">Governance</a></li>
     </ul>
-    <input type="checkbox" id="tt" class="vh" aria-label="Switch between light and dark mode">
-    <label for="tt" class="theme-btn"><span class="when-light"><svg class="i sm"><use href="#i-moon"/></svg></span><span class="when-dark"><svg class="i sm"><use href="#i-sun"/></svg></span><span class="when-light lbl">Dark</span><span class="when-dark lbl">Light</span></label>
   </div>
 </nav>
 
@@ -1180,7 +1176,7 @@ metric_definitions.pdf</pre>
         <tbody>
           <tr><th scope="row">Edit AI Context<small>Org admins only, in AI Controls or over MCP</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
           <tr><th scope="row">Use Global Agent<small>When set to On for organization</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td></tr>
-          <tr><th scope="row">Create custom agents<small>Agents use the creator’s data access</small></th><td colspan="4"><span class="cell-note">Anyone with Agents access, until you restrict it by role</span></td></tr>
+          <tr><th scope="row">Create agents<small>Agents use the creator’s data access</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
           <tr><th scope="row">Use MCP (read)<small>Every default role</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td></tr>
           <tr><th scope="row">Use MCP (write)<small>Member, Manager and Admin</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
         </tbody>
@@ -1192,7 +1188,7 @@ metric_definitions.pdf</pre>
         <tbody>
           <tr><th scope="row">Edit AI Context<small>Org admins only, in AI Controls or over MCP</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
           <tr><th scope="row">Use Global Agent<small>Granted per role</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
-          <tr><th scope="row">Create custom agents<small>Granted to the Power user role</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
+          <tr><th scope="row">Create agents<small>Granted to the Power user role</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
           <tr><th scope="row">Use MCP (read)<small>Per role, per project</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
           <tr><th scope="row">Use MCP (write)<small>Per role, per project</small></th><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="yes"><svg class="i sm"><use href="#i-check"/></svg>Yes</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td><td><span class="no"><svg class="i sm"><use href="#i-dash"/></svg>No</span></td></tr>
         </tbody>
@@ -1227,15 +1223,9 @@ metric_definitions.pdf</pre>
 </footer>
 
 <script>
-/* Everything interactive works without JavaScript. This script only adds:
-   remembering the theme choice, the Copy button, and the active nav link. */
+/* Everything interactive works without JavaScript. This script only adds
+   the Copy button and the active nav link. */
 (function(){
-  var tt = document.getElementById('tt');
-  try { if (localStorage.getItem('themeFlip') === '1') tt.checked = true; } catch(e){}
-  tt.addEventListener('change', function(){
-    try { localStorage.setItem('themeFlip', tt.checked ? '1' : '0'); } catch(e){}
-  });
-
   var copyBtn = document.getElementById('copy');
   copyBtn.addEventListener('click', function(){
     var txt = document.getElementById('sql').innerText;
