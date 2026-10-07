@@ -991,21 +991,21 @@ footer a:hover{color:var(--accent)}
         <div class="card src">
           <div class="src-top"><svg class="i sm"><use href="#i-org"/></svg>Organization context</div>
           <span class="tag">All projects</span>
-<pre>## Monthly churn
-- Base = `subscription_status`
-  "active" on day 1 of the month
-- Churned = in base, not "active"
-  on the last day
-- Leave out free-trial cancels
-- Status comes from billing,
-  imported daily</pre>
+<pre>## Active user
+- Active = viewed content:
+  1+ `Playback Started`
+  in the period
+- Browsing or logging in
+  alone doesn't count
+- Exclude `is_internal` = true</pre>
         </div>
         <div class="card src">
           <div class="src-top"><svg class="i sm"><use href="#i-folder"/></svg>Project context</div>
           <span class="tag">Wins on conflict</span>
-<pre>## Streaming app
-- "Viewer" = 1+ Playback Started
-  in the period</pre>
+<pre>## TV app
+- Autoplay previews aren't views:
+  exclude `Playback Started`
+  where `autoplay` = true</pre>
         </div>
         <div class="card src">
           <div class="src-top"><svg class="i sm"><use href="#i-doc"/></svg>Reference files</div>
@@ -1014,8 +1014,8 @@ footer a:hover{color:var(--accent)}
 metric_definitions.pdf</pre>
         </div>
         <div class="card answer">
-          <div class="q">A product manager and an analyst both ask: "What was churn in September?"</div>
-          <div class="a"><b>Both get:</b> subscribers active on 1 September who weren't active on 30 September, free-trial cancels left out.</div>
+          <div class="q">A product manager and an analyst both ask: "How many active users did the TV app have in September?"</div>
+          <div class="a"><b>Both get:</b> people with at least one real Playback Started, autoplay previews and internal accounts left out.</div>
         </div>
       </div>
       <ul class="facts">
